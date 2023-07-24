@@ -60,12 +60,17 @@ def main(source_project_id, destination_project_id):
     print(f"Starting migration from {source_project_id} to {destination_project_id} Firebase project...")
     hash_alg = auth.UserImportHash.standard_scrypt(
     memory_cost=1024, parallelization=16, block_size=8, derived_key_length=64)
-    try:
-        result = auth.import_users(users_to_migrate, hash_alg=hash_alg, app=destination_app)
-        for err in result.errors:
-            print('Failed to import user:', err.reason)
-    except FirebaseError as error:
-        print('Error importing users:', error)
+
+    # Start importing users in batches of 1000.
+    group_size = 1000
+    for i in range(0, len(users_to_migrate), group_size):
+        group = users_to_migrate[i:i + group_size]
+        try:
+            result = auth.import_users(group, hash_alg=hash_alg, app=destination_app)
+            for err in result.errors:
+                print('Failed to import user:', err.reason)
+        except FirebaseError as error:
+            print('Error importing users:', error)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
